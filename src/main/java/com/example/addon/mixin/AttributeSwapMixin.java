@@ -4,9 +4,11 @@ import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.systems.modules.combat.AttributeSwap;
-import meteordevelopment.meteorclient.utils.player.InvUtils;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.EndCrystal;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,10 +18,11 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Mixin(AttributeSwap.class)
 public abstract class AttributeSwapMixin {
+    @Shadow private void performSwap(Entity target) {}
+
     @Unique private Setting<Integer> glazed$randomDelay;
     @Unique private int glazed$delay;
-    @Unique private int glazed$pendingSlot = -1;
-    @Unique private boolean glazed$executing;
+    @Unique private Entity glazed$pendingTarget;
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void glazed$init(CallbackInfo ci) {
@@ -34,32 +37,27 @@ public abstract class AttributeSwapMixin {
             .build());
     }
 
-    @Inject(method = "doSwap", at = @At("HEAD"), cancellable = true)
-    private void glazed$doSwap(int slotIndex, CallbackInfo ci) {
-        if (glazed$executing || glazed$randomDelay == null) return;
+    @Inject(method = "performSwap", at = @At("HEAD"), cancellable = true)
+    private void glazed$performSwap(Entity target, CallbackInfo ci) {
+        if (target instanceof EndCrystal && !((AttributeSwap) (Object) this).mc.player.hasEffect(MobEffects.WEAKNESS)) return;
+        if (glazed$randomDelay == null || glazed$randomDelay.get() <= 0 || glazed$pendingTarget != null) return;
 
         int max = glazed$randomDelay.get();
-        if (max <= 0) return;
-
-        glazed$pendingSlot = slotIndex;
+        glazed$pendingTarget = target;
         glazed$delay = ThreadLocalRandom.current().nextInt(max + 1);
-        glazed$executing = false;
         ci.cancel();
     }
 
-    @Inject(method = "onTick", at = @At("TAIL"))
+    @Inject(method = "onTick", at = @At("HEAD"))
     private void glazed$onTick(TickEvent.Post event, CallbackInfo ci) {
-        if (glazed$pendingSlot < 0) return;
+        if (glazed$pendingTarget == null) return;
         if (glazed$delay > 0) {
             glazed$delay--;
             return;
         }
 
-        int slot = glazed$pendingSlot;
-        glazed$pendingSlot = -1;
-        glazed$executing = true;
-        ((AttributeSwap) (Object) this).getClass();
-        InvUtils.swap(slot, true);
-        glazed$executing = false;
+        Entity target = glazed$pendingTarget;
+        glazed$pendingTarget = null;
+        performSwap(target);
     }
 }
