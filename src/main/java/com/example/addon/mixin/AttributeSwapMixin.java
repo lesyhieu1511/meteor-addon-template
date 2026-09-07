@@ -4,6 +4,7 @@ import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.systems.modules.combat.AttributeSwap;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.EndCrystal;
@@ -39,7 +40,8 @@ public abstract class AttributeSwapMixin {
 
     @Inject(method = "performSwap", at = @At("HEAD"), cancellable = true)
     private void glazed$performSwap(Entity target, CallbackInfo ci) {
-        if (target instanceof EndCrystal && !((AttributeSwap) (Object) this).mc.player.hasEffect(MobEffects.WEAKNESS)) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (target instanceof EndCrystal && mc.player != null && !mc.player.hasEffect(MobEffects.WEAKNESS)) return;
         if (glazed$randomDelay == null || glazed$randomDelay.get() <= 0 || glazed$pendingTarget != null) return;
 
         int max = glazed$randomDelay.get();
