@@ -47,7 +47,7 @@ public class AutoInvTotem extends Module {
 
     @EventHandler private void onPacketReceive(PacketEvent.Receive event) {
         if (event.packet instanceof ClientboundEntityEventPacket packet && packet.getEventId() == 35 && mc.player != null && packet.getEntity(mc.level) == mc.player) {
-            if (openInv.get() && mc.screen == null) { shouldOpenInv = true; invOpenTicks = invOpenDelay.get(); }
+            if (openInv.get() && mc.gui.screen() == null) { shouldOpenInv = true; invOpenTicks = invOpenDelay.get(); }
         }
     }
 
@@ -57,25 +57,25 @@ public class AutoInvTotem extends Module {
         boolean currentlyHasTotem = hasTotemInOffhand();
         if (hadTotemInOffhand && !currentlyHasTotem) {
             needsTotem = true;
-            if (mc.screen instanceof InventoryScreen) delayTicks = delay.get();
+            if (mc.gui.screen() instanceof InventoryScreen) delayTicks = delay.get();
         }
         hadTotemInOffhand = currentlyHasTotem;
         if (currentlyHasTotem && needsTotem) { needsTotem = false; delayTicks = 0; }
     }
 
     private void handleAutoInventory() {
-        if (shouldOpenInv && invOpenTicks > 0 && --invOpenTicks == 0 && mc.screen == null) {
-            mc.setScreen(new InventoryScreen(mc.player)); invAutoOpened = true; invCloseTicks = invCloseDelay.get(); shouldOpenInv = false;
+        if (shouldOpenInv && invOpenTicks > 0 && --invOpenTicks == 0 && mc.gui.screen() == null) {
+            mc.gui.setScreen(new InventoryScreen(mc.player)); invAutoOpened = true; invCloseTicks = invCloseDelay.get(); shouldOpenInv = false;
         }
-        if (invAutoOpened && invCloseTicks > 0 && --invCloseTicks == 0 && mc.screen instanceof InventoryScreen) {
-            mc.setScreen(null); invAutoOpened = false;
+        if (invAutoOpened && invCloseTicks > 0 && --invCloseTicks == 0 && mc.gui.screen() instanceof InventoryScreen) {
+            mc.gui.setScreen(null); invAutoOpened = false;
         }
-        if (invAutoOpened && !(mc.screen instanceof InventoryScreen)) { invAutoOpened = false; invCloseTicks = 0; }
+        if (invAutoOpened && !(mc.gui.screen() instanceof InventoryScreen)) { invAutoOpened = false; invCloseTicks = 0; }
     }
 
     @EventHandler private void onOpenScreen(OpenScreenEvent event) { if (event.screen instanceof InventoryScreen && needsTotem) delayTicks = delay.get(); }
 
-    @EventHandler private void onTickDelayed(TickEvent.Post event) { if (delayTicks > 0 && mc.player != null && --delayTicks == 0) moveTotemToOffhand(); }
+    @EventHandler private void onTickDelayed(TickEvent.Post event) { if (delayTicks > 0 && mc.player != null) { if (--delayTicks == 0) moveTotemToOffhand(); } }
 
     private void moveTotemToOffhand() {
         int totemSlot = findTotemSlot();
