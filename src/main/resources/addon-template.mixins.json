@@ -1,9 +1,10 @@
 {
   "required": true,
   "package": "com.example.addon.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "client": [
-    "ExampleMixin"
+    "CameraMixin",
+    "EntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
