@@ -2,7 +2,10 @@ package com.example.addon;
 
 import com.example.addon.commands.CommandExample;
 import com.example.addon.hud.HudExample;
+import com.example.addon.modules.AutoDoubleHand;
+import com.example.addon.modules.AutoInvTotem;
 import com.example.addon.modules.GlazedFreecam;
+import com.example.addon.modules.HoverTotem;
 import com.example.addon.modules.ModuleExample;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
@@ -23,23 +26,15 @@ public class AddonTemplate extends MeteorAddon {
     public void onInitialize() {
         LOG.info("Initializing Glazed 26.2 port");
         Modules.get().add(new GlazedFreecam());
+        Modules.get().add(new AutoDoubleHand());
+        Modules.get().add(new AutoInvTotem());
+        Modules.get().add(new HoverTotem());
         Modules.get().add(new ModuleExample());
         Commands.add(new CommandExample());
         Hud.get().register(HudExample.INFO);
     }
 
-    @Override
-    public void onRegisterCategories() {
-        Modules.registerCategory(CATEGORY);
-    }
-
-    @Override
-    public String getPackage() {
-        return "com.example.addon";
-    }
-
-    @Override
-    public GithubRepo getRepo() {
-        return new GithubRepo("lesyhieu1511", "meteor-addon-template");
-    }
+    @Override public void onRegisterCategories() { Modules.registerCategory(CATEGORY); }
+    @Override public String getPackage() { return "com.example.addon"; }
+    @Override public GithubRepo getRepo() { return new GithubRepo("lesyhieu1511", "meteor-addon-template"); }
 }
