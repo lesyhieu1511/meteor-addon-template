@@ -2,6 +2,7 @@ package com.example.addon;
 
 import com.example.addon.commands.CommandExample;
 import com.example.addon.hud.HudExample;
+import com.example.addon.modules.AimAssist;
 import com.example.addon.modules.AutoDoubleHand;
 import com.example.addon.modules.AutoInvTotem;
 import com.example.addon.modules.GlazedFreecam;
@@ -29,6 +30,7 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new AutoDoubleHand());
         Modules.get().add(new AutoInvTotem());
         Modules.get().add(new HoverTotem());
+        Modules.get().add(new AimAssist());
         Modules.get().add(new ModuleExample());
         Commands.add(new CommandExample());
         Hud.get().register(HudExample.INFO);
