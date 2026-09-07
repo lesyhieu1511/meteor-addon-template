@@ -5,7 +5,9 @@
   "client": [
     "CameraMixin",
     "EntityMixin",
-    "HandledScreenMixin"
+    "HandledScreenMixin",
+    "KillAuraRandomDelayMixin",
+    "AttributeSwapMixin"
   ],
   "injectors": {
     "defaultRequire": 1
