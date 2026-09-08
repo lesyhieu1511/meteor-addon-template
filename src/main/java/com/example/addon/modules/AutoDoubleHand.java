@@ -9,6 +9,7 @@ import net.minecraft.world.item.Items;
 
 public class AutoDoubleHand extends Module {
     private boolean wasHoldingTotem = true;
+    private boolean pendingSwap;
 
     public AutoDoubleHand() {
         super(AddonTemplate.CATEGORY, "auto-double-hand", "After an offhand totem pops, switches to a hotbar totem.");
@@ -17,20 +18,28 @@ public class AutoDoubleHand extends Module {
     @Override
     public void onActivate() {
         wasHoldingTotem = mc.player != null && mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
+        pendingSwap = false;
     }
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
         if (mc.player == null || mc.gameMode == null) return;
+
         boolean holdingNow = mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
-        if (wasHoldingTotem && !holdingNow) {
-            int slot = findHotbarTotem();
-            if (slot != -1) {
-                mc.player.getInventory().setSelectedSlot(slot);
-                mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
-            }
-        }
+        if (wasHoldingTotem && !holdingNow) pendingSwap = true;
         wasHoldingTotem = holdingNow;
+
+        if (!pendingSwap || mc.gui.screen() != null) return;
+
+        int slot = findHotbarTotem();
+        if (slot == -1) {
+            pendingSwap = false;
+            return;
+        }
+
+        mc.player.getInventory().setSelectedSlot(slot);
+        mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
+        pendingSwap = false;
     }
 
     private int findHotbarTotem() {
