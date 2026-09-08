@@ -17,13 +17,17 @@ public class AutoDoubleHand extends Module {
 
     @Override
     public void onActivate() {
-        wasHoldingTotem = mc.player != null && mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
-        pendingSwap = false;
+        resetState();
     }
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
         if (mc.player == null || mc.gameMode == null) return;
+
+        if (mc.player.isDeadOrDying()) {
+            resetState();
+            return;
+        }
 
         boolean holdingNow = mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
         if (wasHoldingTotem && !holdingNow) pendingSwap = true;
@@ -33,6 +37,11 @@ public class AutoDoubleHand extends Module {
 
         int slot = findHotbarTotem();
         if (slot == -1) {
+            pendingSwap = false;
+            return;
+        }
+
+        if (mc.player.getInventory().getSelectedSlot() == slot) {
             pendingSwap = false;
             return;
         }
@@ -47,5 +56,10 @@ public class AutoDoubleHand extends Module {
             if (mc.player.getInventory().getItem(i).is(Items.TOTEM_OF_UNDYING)) return i;
         }
         return -1;
+    }
+
+    private void resetState() {
+        wasHoldingTotem = mc.player != null && mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING);
+        pendingSwap = false;
     }
 }
