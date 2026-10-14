@@ -1,6 +1,7 @@
 package com.example.addon.mixin;
 
 import meteordevelopment.meteorclient.events.world.TickEvent;
+import meteordevelopment.meteorclient.settings.ItemListSetting;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.systems.modules.combat.AttributeSwap;
@@ -8,19 +9,24 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.Item;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Mixin(AttributeSwap.class)
 public abstract class AttributeSwapMixin {
     @Shadow private void performSwap(Entity target) {}
+
     @Unique private Setting<Integer> glazed$randomDelay;
+    @Unique private Setting<List<Item>> glazed$noSpearWhileHolding;
     @Unique private int glazed$delay;
     @Unique private Entity glazed$pendingTarget;
     @Unique private boolean glazed$executingPending;
@@ -28,7 +34,35 @@ public abstract class AttributeSwapMixin {
     @Inject(method = "<init>", at = @At("RETURN"))
     private void glazed$init(CallbackInfo ci) {
         AttributeSwap swap = (AttributeSwap) (Object) this;
-        glazed$randomDelay = swap.settings.getDefaultGroup().add(new IntSetting.Builder().name("random-delay").description("Adds a random 0 to N tick delay before an attribute swap.").defaultValue(0).min(0).max(10).sliderRange(0, 10).build());
+        glazed$randomDelay = swap.settings.getDefaultGroup().add(new IntSetting.Builder()
+            .name("random-delay")
+            .description("Adds a random 0 to N tick delay before an attribute swap.")
+            .defaultValue(0)
+            .min(0).max(10)
+            .sliderRange(0, 10)
+            .build());
+
+        glazed$noSpearWhileHolding = swap.settings.getDefaultGroup().add(new ItemListSetting.Builder()
+            .name("no-spear-while-holding")
+            .description("Do not swap to a spear while either hand holds one of these items.")
+            .defaultValue()
+            .build());
+    }
+
+    @Inject(method = "getSmartSpearSlot", at = @At("HEAD"), cancellable = true)
+    private void glazed$skipSpearForHeldItems(boolean requireLunge, CallbackInfoReturnable<Integer> cir) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || glazed$noSpearWhileHolding == null) return;
+
+        List<Item> excluded = glazed$noSpearWhileHolding.get();
+        if (excluded.isEmpty()) return;
+
+        Item mainHand = mc.player.getMainHandItem().getItem();
+        Item offHand = mc.player.getOffhandItem().getItem();
+
+        if (excluded.contains(mainHand) || excluded.contains(offHand)) {
+            cir.setReturnValue(-1);
+        }
     }
 
     @Inject(method = "performSwap", at = @At("HEAD"), cancellable = true)
