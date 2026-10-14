@@ -1,6 +1,7 @@
 package com.example.addon.mixin;
 
 import meteordevelopment.meteorclient.events.world.TickEvent;
+import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.ItemListSetting;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
@@ -24,9 +25,12 @@ import java.util.concurrent.ThreadLocalRandom;
 @Mixin(AttributeSwap.class)
 public abstract class AttributeSwapMixin {
     @Shadow private void performSwap(Entity target) {}
+    @Shadow private Entity getTargetEntity() { return null; }
 
     @Unique private Setting<Integer> glazed$randomDelay;
+    @Unique private Setting<Boolean> glazed$avoidSpearWhileHolding;
     @Unique private Setting<List<Item>> glazed$noSpearWhileHolding;
+    @Unique private Setting<Boolean> glazed$avoidSpearInMeleeRange;
     @Unique private int glazed$delay;
     @Unique private Entity glazed$pendingTarget;
     @Unique private boolean glazed$executingPending;
@@ -42,26 +46,51 @@ public abstract class AttributeSwapMixin {
             .sliderRange(0, 10)
             .build());
 
+        glazed$avoidSpearWhileHolding = swap.settings.getDefaultGroup().add(new BoolSetting.Builder()
+            .name("avoid-spear-while-holding")
+            .description("Enable the selected-item filter that prevents switching to a spear.")
+            .defaultValue(true)
+            .build());
+
         glazed$noSpearWhileHolding = swap.settings.getDefaultGroup().add(new ItemListSetting.Builder()
             .name("no-spear-while-holding")
             .description("Do not swap to a spear while either hand holds one of these items.")
             .defaultValue()
+            .visible(glazed$avoidSpearWhileHolding::get)
+            .build());
+
+        glazed$avoidSpearInMeleeRange = swap.settings.getDefaultGroup().add(new BoolSetting.Builder()
+            .name("avoid-spear-in-melee-range")
+            .description("Do not swap to a spear while the targeted entity is within normal melee reach.")
+            .defaultValue(true)
             .build());
     }
 
     @Inject(method = "getSmartSpearSlot", at = @At("HEAD"), cancellable = true)
     private void glazed$skipSpearForHeldItems(boolean requireLunge, CallbackInfoReturnable<Integer> cir) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || glazed$noSpearWhileHolding == null) return;
+        if (mc.player == null) return;
 
-        List<Item> excluded = glazed$noSpearWhileHolding.get();
-        if (excluded.isEmpty()) return;
+        if (glazed$avoidSpearWhileHolding != null
+            && glazed$avoidSpearWhileHolding.get()
+            && glazed$noSpearWhileHolding != null) {
+            List<Item> excluded = glazed$noSpearWhileHolding.get();
+            if (!excluded.isEmpty()) {
+                Item mainHand = mc.player.getMainHandItem().getItem();
+                Item offHand = mc.player.getOffhandItem().getItem();
 
-        Item mainHand = mc.player.getMainHandItem().getItem();
-        Item offHand = mc.player.getOffhandItem().getItem();
+                if (excluded.contains(mainHand) || excluded.contains(offHand)) {
+                    cir.setReturnValue(-1);
+                    return;
+                }
+            }
+        }
 
-        if (excluded.contains(mainHand) || excluded.contains(offHand)) {
-            cir.setReturnValue(-1);
+        if (glazed$avoidSpearInMeleeRange != null && glazed$avoidSpearInMeleeRange.get()) {
+            Entity target = getTargetEntity();
+            if (target != null && mc.player.distanceTo(target) <= mc.player.entityInteractionRange() + 0.5) {
+                cir.setReturnValue(-1);
+            }
         }
     }
 
